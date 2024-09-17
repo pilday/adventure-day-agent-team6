@@ -293,7 +293,8 @@ async def ask_question(ask: Ask):
         print("second_response")
         
         #response= second_response.choices[0].message.content
-
+    else:
+        second_response = first_response
 
     answer = Answer(answer=second_response.choices[0].message.content)
     answer.correlationToken = ask.correlationToken
