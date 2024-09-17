@@ -235,7 +235,7 @@ async def ask_question(ask: Ask):
     if(ask.type == QuestionType.true_or_false):
         system_promt += "answer with True or False"
     elif(ask.type == QuestionType.estimation):
-        system_promt += "answer realted to the estimate word"
+        system_promt += "answer with an singel number"
     else: system_promt += "just the answer without the order"
     
     question = ask.question
@@ -285,14 +285,14 @@ async def ask_question(ask: Ask):
             print("Addding this message to the next prompt:") 
             print (messages)
             
-             # extend conversation with function response
-            second_response = client.chat.completions.create(
-                model = deployment_name,
-                messages = messages)  # get a new response from the model where it can see the function response
-            
-            print("second_response")
-            
-            response= second_response.choices[0].message.content
+        # extend conversation with function response
+        second_response = client.chat.completions.create(
+            model = deployment_name,
+            messages = messages)  # get a new response from the model where it can see the function response
+        
+        print("second_response")
+        
+        #response= second_response.choices[0].message.content
 
 
     answer = Answer(answer=second_response.choices[0].message.content)
