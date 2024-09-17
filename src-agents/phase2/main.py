@@ -111,6 +111,16 @@ async def ask_question(ask: Ask):
         
     # augment the question with the found documents and ask the LLM to generate a response
     system_prompt = "Here is what you need to do: "
+    if ask.type == QuestionType.true_or_false:
+        system_prompt += "First: Give me only an answer in form of True or False"
+    if ask.type == QuestionType.estimation:
+        system_prompt += "First: Give me only an answer in form of a single number"
+    if ask.type == QuestionType.multiple_choice:
+        system_prompt += "First: Give me only an answer only with one of the options in the question"
+    #if ask.type == QuestionType.popular_choice:
+    #    system_prompt += "First: Give me only an answer only with one of the options in the question"
+
+
     parameters = [system_prompt, ' Context:', found_docs_as_text , ' Question:', start_phrase]
     joined_parameters = ''.join(parameters)
 
