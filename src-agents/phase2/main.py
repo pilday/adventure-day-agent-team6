@@ -1,4 +1,5 @@
 import os
+import asyncio
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -80,11 +81,45 @@ async def ask_question(ask: Ask):
     """
 
     start_phrase =  ask.question
-    response: openai.types.chat.chat_completion.ChatCompletion = None
 
     #####\n",
     # implement rag flow here\n",
     ######\n",
+
+    # create a vectorized query based on the question
+    vector = VectorizedQuery(vector=get_embedding(start_phrase), k_nearest_neighbors=5, fields="vector")
+
+
+    # create search client to retrieve movies from the vector store
+    found_docs = list(search_client.search(
+        search_text=None,
+        query_type="semantic",
+        semantic_configuration_name="movies-semantic-config",
+        vector_queries=[vector],
+        select=["title", "genre", "plot", "year", "rating"],
+        top=5
+    ))
+
+    found_docs_as_text = " "
+    # print the found documents and the field that were selected
+    for doc in found_docs:
+        print("Movie: {}".format(doc["title"]))
+        print("Genre: {}".format(doc["genre"]))
+        print("Year: {}".format(doc["year"]))
+        print("----------")
+        found_docs_as_text += " "+ "Movie Title: {}".format(doc["title"]) +" "+ "Release Year: {}".format(doc["year"]) + " "+ "Movie Plot: {}".format(doc["plot"]) +  " " + "Movie Rating: {}".format(doc["rating"]) +  " " + "Movie Genre: {}".format(doc["genre"])
+        
+    # augment the question with the found documents and ask the LLM to generate a response
+    system_prompt = "Here is what you need to do: "
+    parameters = [system_prompt, ' Context:', found_docs_as_text , ' Question:', start_phrase]
+    joined_parameters = ''.join(parameters)
+
+    
+    # response: openai.types.chat.chat_completion.ChatCompletion = None
+    response = await asyncio.to_thread(client.chat.completions.create,
+                                           model=deployment_name,
+                                           messages=[{"role": "user", "content": joined_parameters}]
+                                           )
 
     answer = Answer(answer=response.choices[0].message.content)
     answer.correlationToken = ask.correlationToken
