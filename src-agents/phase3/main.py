@@ -235,7 +235,7 @@ async def ask_question(ask: Ask):
     if(ask.type == QuestionType.true_or_false):
         system_promt += "answer with True or False"
     elif(ask.type == QuestionType.estimation):
-        system_promt += "answer with an single number"
+        system_promt += "answer with an single number only like 9 or 9.3"
     else: system_promt += "just the answer without the order"
     
     question = ask.question
