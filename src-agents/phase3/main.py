@@ -11,6 +11,171 @@ from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 app = FastAPI()
 
 load_dotenv()
+smoorghApi = "https://smoorgh-api.happypebble-f6fb3666.northeurope.azurecontainerapps.io/"
+
+def get_movie_rating(title):
+    try:
+        headers = {"title": title}
+        response = requests.get(f"{smoorghApi}rating", headers=headers)
+        print('The api response for rating is:', response.text)
+        return response.text
+
+    except:
+        return "Sorry, I couldn't find a rating for that movie."
+
+def get_movie_year(title):
+    try:
+        headers = {"title": title}
+        response = requests.get(f"{smoorghApi}year", headers=headers)
+        print('The api response for year is:', response.text)
+        return response.text
+
+    except:
+        return "Sorry, I couldn't find a year for that movie."
+    
+def get_movie_actor(title):
+    try:
+        headers = {"title": title}
+        response = requests.get(f"{smoorghApi}actor", headers=headers)
+        print('The api response for actor is:', response.text)
+        return response.text
+
+    except:
+        return "Sorry, I couldn't find an actor for that movie."
+    
+def get_movie_location(title):
+    try:
+        headers = {"title": title}
+        response = requests.get(f"{smoorghApi}location", headers=headers)
+        print('The api response for location is:', response.text)
+        return response.text
+
+    except:
+        return "Sorry, I couldn't find a location for that movie."
+
+def get_movie_genre(title):
+    try:
+        headers = {"title": title}
+        response = requests.get(f"{smoorghApi}genre", headers=headers)
+        print('The api response for genre is:', response.text)
+        return response.text
+
+    except:
+        return "Sorry, I couldn't find a genre for that movie."
+    
+functions = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_movie_rating",
+                "description": "Gets the rating of a movie",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "The movie name. The movie name should be a string without quotation marks.",
+                        }
+                    },
+                    "required": ["title"],
+                },
+            }
+        },
+         {
+            "type": "function",
+            "function": {
+                "name": "get_movie_location",
+                "description": "Gets the location of a movie",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "The movie name. The movie name should be a string without quotation marks.",
+                        }
+                    },
+                    "required": ["title"],
+                },
+            }
+        },
+                 {
+            "type": "function",
+            "function": {
+                "name": "get_movie_location",
+                "description": "Gets the location of a movie",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "The movie name. The movie name should be a string without quotation marks.",
+                        }
+                    },
+                    "required": ["title"],
+                },
+            }
+        },
+                 {
+            "type": "function",
+            "function": {
+                "name": "get_movie_year",
+                "description": "Gets the year when the movie was released",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "The movie name. The movie name should be a string without quotation marks.",
+                        }
+                    },
+                    "required": ["title"],
+                },
+            }
+        },
+                 {
+            "type": "function",
+            "function": {
+                "name": "get_movie_actor",
+                "description": "Gets the movie actor",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "The movie name. The movie name should be a string without quotation marks.",
+                        }
+                    },
+                    "required": ["title"],
+                },
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "get_movie_genre",
+                "description": "Gets the movie genre",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string",
+                            "description": "The movie name. The movie name should be a string without quotation marks.",
+                        }
+                    },
+                    "required": ["title"],
+                },
+            }
+        },
+    ]   
+available_functions = {
+            "get_movie_rating": get_movie_rating,
+            "get_movie_location": get_movie_location,
+            "get_movie_genre": get_movie_genre,
+            "get_movie_actor": get_movie_actor,
+            "get_movie_year": get_movie_year        
+        }
+
+
 
 class QuestionType(str, Enum):
     multiple_choice = "multiple_choice"
@@ -60,16 +225,79 @@ async def ask_question(ask: Ask):
     Ask a question
     """
 
-    start_phrase =  ask.question
-    response: openai.types.chat.chat_completion.ChatCompletion = None
+    #start_phrase =  ask.question
+    #response: openai.types.chat.chat_completion.ChatCompletion = None
 
     #####\n",
     # implement function call flow here\n",
     ######\n",
+    system_promt = "short answer, few word as possible, "
+    if(ask.type == QuestionType.true_or_false):
+        system_promt += "answer with True or False"
+    elif(ask.type == QuestionType.estimation):
+        system_promt += "answer realted to the estimate word"
+    else: system_promt += "just the answer without the order"
+    
+    question = ask.question
+    messages= [{"role" : "assistant", "content" : question}
+               , { "role" : "system", "content" : "Answer the question of the user and use the tools available to you."},
+               {"role": "system", "content": system_promt}
+               ]
+    first_response = client.chat.completions.create(
+        model = deployment_name,
+        messages = messages,
+        tools = functions,
+        tool_choice = "auto",
+    )
 
-    answer = Answer(answer=response.choices[0].message.content)
+    print(first_response)
+    response_message = first_response.choices[0].message
+    tool_calls = response_message.tool_calls
+
+     # Step 2: check if GPT wanted to call a function
+    if tool_calls:
+        print("Recommended Function call:")
+        print(tool_calls)
+        print()
+    
+        # Step 3: call the function
+        messages.append(response_message)
+
+        for tool_call in tool_calls:
+            function_name = tool_call.function.name
+            # verify function exists
+            if function_name not in available_functions:
+                print("Function " + function_name + " does not exist")
+            else:
+                print("Calling function: " + function_name)
+            function_to_call = available_functions[function_name]
+            function_args = json.loads(tool_call.function.arguments)
+            print(function_args)
+            function_response = function_to_call(**function_args)
+            messages.append(
+                {
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": function_name,
+                    "content": function_response,
+                }
+            ) 
+            print("Addding this message to the next prompt:") 
+            print (messages)
+            
+             # extend conversation with function response
+            second_response = client.chat.completions.create(
+                model = deployment_name,
+                messages = messages)  # get a new response from the model where it can see the function response
+            
+            print("second_response")
+            
+            response= second_response.choices[0].message.content
+
+
+    answer = Answer(answer=second_response.choices[0].message.content)
     answer.correlationToken = ask.correlationToken
-    answer.promptTokensUsed = response.usage.prompt_tokens
-    answer.completionTokensUsed = response.usage.completion_tokens
+    answer.promptTokensUsed = second_response.usage.prompt_tokens
+    answer.completionTokensUsed = second_response.usage.completion_tokens
 
     return answer
